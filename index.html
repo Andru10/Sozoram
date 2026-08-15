@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>sozoram.hu - Dino Játék</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f7f7f7;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: sans-serif;
+        }
+        h1 { margin-bottom: 10px; color: #333; }
+        canvas {
+            background-color: #fff;
+            border-bottom: 2px solid #535353;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+
+    <h1>sozoram.hu</h1>
+    <canvas id="game" width="800" height="200"></canvas>
+
+    <script>
+        const canvas = document.getElementById('game');
+        const ctx = canvas.getContext('2d');
+
+        // Játékos (Karakter)
+        let player = {
+            x: 50,
+            y: 150,
+            width: 30,
+            height: 40,
+            dy: 0,
+            gravity: 0.6,
+            jumpPower: -12,
+            isGrounded: false
+        };
+
+        // Akadályok
+        let obstacles = [];
+        let frameCount = 0;
+        let score = 0;
+        let gameOver = false;
+
+        // Irányítás (Ugrás Szóközre)
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                if (gameOver) {
+                    resetGame();
+                } else if (player.isGrounded) {
+                    player.dy = player.jumpPower;
+                    player.isGrounded = false;
+                }
+            }
+        });
+
+        function spawnObstacle() {
+            let height = 30 + Math.random() * 20;
+            obstacles.push({
+                x: canvas.width,
+                y: canvas.height - height,
+                width: 20,
+                height: height,
+                speed: 6
+            });
+        }
+
+        function resetGame() {
+            obstacles = [];
+            score = 0;
+            frameCount = 0;
+            gameOver = false;
+            player.y = 150;
+            player.dy = 0;
+            loop();
+        }
+
+        function update() {
+            if (gameOver) return;
+
+            // Gravitáció és mozgás
+            player.dy += player.gravity;
+            player.y += player.dy;
+
+            if (player.y + player.height >= canvas.height) {
+                player.y = canvas.height - player.height;
+                player.dy = 0;
+                player.isGrounded = true;
+            }
+
+            // Akadályok generálása és mozgatása
+            frameCount++;
+            if (frameCount % 90 === 0) {
+                spawnObstacle();
+            }
+
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                let obs = obstacles[i];
+                obs.x -= obs.speed;
+
+                // Ütközésvizsgálat
+                if (
+                    player.x < obs.x + obs.width &&
+                    player.x + player.width > obs.x &&
+                    player.y < obs.y + obs.height &&
+                    player.y + player.height > obs.y
+                ) {
+                    gameOver = true;
+                }
+
+                if (obs.x + obs.width < 0) {
+                    obstacles.splice(i, 1);
+                    score += 10;
+                }
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Karakter kirajzolása (Fekete téglalap)
+            ctx.fillStyle = '#333';
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+
+            // Akadályok kirajzolása (Piros téglalapok)
+            ctx.fillStyle = '#e74c3c';
+            obstacles.forEach(obs => {
+                ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+            });
+
+            // Pontszám
+            ctx.fillStyle = '#333';
+            ctx.font = '20px Arial';
+            ctx.fillText(`Pont: ${score}`, 680, 30);
+
+            if (gameOver) {
+                ctx.fillStyle = '#333';
+                ctx.font = '30px Arial';
+                ctx.fillText('JÁTÉK VÉGE!', 310, 90);
+                ctx.font = '16px Arial';
+                ctx.fillText('Nyomj SZÓKÖZT az újrakezdéshez', 280, 120);
+            }
+        }
+
+        function loop() {
+            update();
+            draw();
+            if (!gameOver) {
+                requestAnimationFrame(loop);
+            }
+        }
+
+        loop();
+    </script>
+</body>
+</html>
